@@ -1,0 +1,19 @@
+{
+  "name": "brightpath-custom-routing-algorithm",
+  "version": "0.0.870",
+  "description": "",
+  "keywords": [],
+  "main": "index.js",
+  "dependencies": {
+    "mapbox-gl": "0.39.1"
+  },
+  "devDependencies": {
+    "react-scripts": "1.0.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}

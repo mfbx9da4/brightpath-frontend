@@ -1,0 +1,72 @@
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+body {
+  margin: 0;
+  padding: 0;
+}
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+.marker {
+  width: 30px;
+  height: 30px;
+  color: white;
+  border-radius: 50%;
+  border: 1px solid white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  font-weight: bold;
+}
+#draw-all {
+  z-index: 9;
+  position: absolute;
+}
+* {
+  box-sizing: border-box;
+}
+/* .status {
+  z-index: 9;
+  position: absolute;
+  right: 0;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  color: #555;
+  font-family: sans-serif;
+}       
+.label {
+  padding-bottom: 6px;
+  font-size:0.9rem;
+  color: #777;
+}
+.label::before {
+  width: 10px;
+  height: 10px;
+  background: blue;
+  content: "";
+  display: inline-block;
+  border-radius: 50%;
+}
+.label-start::before {
+  background: #4834d4;
+}
+.label-end::before {
+  background: #6ab04c;
+}
+.start {
+  padding-bottom: 10px;
+}
+.start,
+.end {
+  font-size: 0.8rem;
+} */
