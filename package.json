@@ -6,7 +6,9 @@
   "main": "index.js",
   "dependencies": {
     "mapbox-gl": "0.39.1",
-    "preact": "10.0.0"
+    "preact": "10.0.0",
+    "react": "^16.10.2",
+    "react-dom": "^16.10.2"
   },
   "devDependencies": {
     "react-scripts": "1.0.0"
