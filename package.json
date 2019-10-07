@@ -5,7 +5,8 @@
   "keywords": [],
   "main": "index.js",
   "dependencies": {
-    "mapbox-gl": "0.39.1"
+    "mapbox-gl": "0.39.1",
+    "preact": "10.0.0"
   },
   "devDependencies": {
     "react-scripts": "1.0.0"
