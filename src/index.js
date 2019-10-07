@@ -1,6 +1,5 @@
 import "./index.css"
 import { spinner } from "./spinner"
-import { render } from "react-dom"
 /*
   ====
   Backend repot can be found here
@@ -278,8 +277,6 @@ window.setInterval(() => {
     })
   }
 }, 200)
-
-render(() => "hello react", document.querySelector("#react-root"))
 
 // function renderStatus({ setFrom, fromLocation, toLocation }) {
 //   const status = document.querySelector(".status");
