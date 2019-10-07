@@ -160,9 +160,9 @@ class PathDrawer {
     const copy = JSON.parse(JSON.stringify(geojson))
     copy.features[0].geometry.coordinates = coords.slice(0, i + 1)
     this.map.getSource(this.name).setData(copy)
-    if (i === coords.length - 1) {
-      map.panTo(coords[i])
-    }
+    // if (i === coords.length - 1) {
+    //   map.panTo(coords[i])
+    // }
   }
 
   _animateDrawPath(geojson, i, resolve) {
