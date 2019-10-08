@@ -1,10 +1,40 @@
 import "./index.css"
 import { spinner } from "./spinner"
+import * as React from "preact"
+// eslint-disable-next-line
+const { h, render, Component } = React
+
 /*
-  ====
-  Backend repot can be found here
-   https://github.com/mfbx9da4/brightpaor th-backend
+  Backend repo can be found here
+   https://github.com/mfbx9da4/brightpath-backend
 */
+
+let isNavigating = false
+class Root extends Component {
+  state = {
+    isNavigating: false,
+  }
+
+  toggleNavigatingMode = () => {
+    isNavigating = !isNavigating
+    this.setState({ isNavigating })
+  }
+
+  render() {
+    return (
+      <div style={{ position: "absolute", zIndex: 10, right: 0 }}>
+        <button
+          style={{ padding: 20, background: "white" }}
+          onClick={this.toggleNavigatingMode}
+        >
+          Navigation mode is {this.state.isNavigating ? "ON" : "OFF"}
+        </button>
+      </div>
+    )
+  }
+}
+
+render(<Root></Root>, document.querySelector("#react-root"))
 
 const mapboxgl = window.mapboxgl || {}
 
@@ -263,6 +293,9 @@ class CurrentLocationDrawer {
     const curCoords = [cur.lng, cur.lat]
     if (curCoords[0] !== coords[0] && curCoords[1] !== coords[1]) {
       this.marker.setLngLat(coords)
+      if (isNavigating) {
+        map.panTo(coords)
+      }
     }
   }
 }
