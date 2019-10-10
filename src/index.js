@@ -8,7 +8,7 @@ const { h, render, Component } = React
   Backend repo can be found here
    https://github.com/mfbx9da4/brightpath-backend
 */
-
+let currentDistance = null
 let isNavigating = false
 class Root extends Component {
   state = {
@@ -27,7 +27,10 @@ class Root extends Component {
           style={{ padding: 20, background: "white" }}
           onClick={this.toggleNavigatingMode}
         >
-          Navigation mode is {this.state.isNavigating ? "ON" : "OFF"}
+          Navigation mode is{" "}
+          {this.state.isNavigating
+            ? "ON"
+            : "OFF " + (currentDistance ? currentDistance.toFixed(3) : "")}
         </button>
       </div>
     )
@@ -69,6 +72,8 @@ const fetchAndDrawPath = async (pathDrawer, body) => {
   state.isFetching = false
   updatePlaceholderStart(state)
   const json = await response.json()
+  console.log("json.distance", json.distance)
+  currentDistance = json.distance
   const geojson = json.data
   var coordinates = geojson.features[0].geometry.coordinates
   console.log("got data", coordinates.length)
@@ -132,7 +137,7 @@ class PathDrawer {
       type: "geojson",
       data: nullData,
     })
-    map.addLayer({
+    this.map.addLayer({
       id: this.name,
       type: "line",
       source: this.name,
@@ -207,17 +212,27 @@ class PathDrawer {
   }
 }
 
-// Initialize the map
-const map = new mapboxgl.Map({
-  container: "map",
-  style: "mapbox://styles/psyrendust/cj5lgun8o2h992rpp9vyyb5h1",
-  center: [-0.0716729944249721, 51.51922576352587],
-  zoom: 14,
-  pitch: 0,
-})
+const Map = {
+  _map: null,
+  createMap: async (initialConfig = {}) => {
+    if (Map._map) return Map._map
+    let map = new mapboxgl.Map({
+      container: "map",
+      style: "mapbox://styles/psyrendust/cj5lgun8o2h992rpp9vyyb5h1",
+      center: [-0.0716729944249721, 51.51922576352587],
+      zoom: 14,
+      pitch: 0,
+      ...initialConfig,
+    })
+    Map._map = map
+    await new Promise(done => map.on("style.load", done))
+    return Map._map
+  },
+}
 
-map.on("style.load", async function() {
-  // EDGE CASE: Does not work
+async function main() {
+  const map = await Map.createMap()
+  // EDGE CASE: Does not work - find out why
   // const body = {
   //   fromLocation: [-0.12488277911884893, 51.487325450423924],
   //   toLocation: [-0.11963984724806664, 51.489021927247165]
@@ -239,6 +254,7 @@ map.on("style.load", async function() {
 
   let setFrom = true
   map.on("mousedown", async e => {
+    if (isNavigating) return
     const { lng, lat } = e.lngLat
     const coords = [lng, lat]
     if (setFrom) {
@@ -252,8 +268,10 @@ map.on("style.load", async function() {
     }
     setFrom = !setFrom
   })
-})
-
+  const locationMarker = new CurrentLocationDrawer(map)
+  pollForCurrentLocation(locationMarker)
+}
+main()
 let placeholderStart
 let placeholderStartEl
 function initPlaceholderStart(map) {
@@ -294,22 +312,22 @@ class CurrentLocationDrawer {
     if (curCoords[0] !== coords[0] && curCoords[1] !== coords[1]) {
       this.marker.setLngLat(coords)
       if (isNavigating) {
-        map.panTo(coords)
+        this.map.panTo(coords)
       }
     }
   }
 }
 
-const locationMarker = new CurrentLocationDrawer(map)
-
-window.setInterval(() => {
-  if ("geolocation" in navigator) {
-    navigator.geolocation.getCurrentPosition(function(position) {
-      const coords = [position.coords.longitude, position.coords.latitude]
-      locationMarker.update(coords)
-    })
-  }
-}, 200)
+function pollForCurrentLocation(locationMarker) {
+  window.setInterval(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const coords = [position.coords.longitude, position.coords.latitude]
+        locationMarker.update(coords)
+      })
+    }
+  }, 200)
+}
 
 // function renderStatus({ setFrom, fromLocation, toLocation }) {
 //   const status = document.querySelector(".status");
