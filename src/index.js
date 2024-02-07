@@ -1,15 +1,13 @@
 import "./index.css"
-import { Map } from "./map"
+import { Mapbox } from "./mapbox"
 import { Footer } from "./Footer"
 import { PathRenderer } from "./PathRenderer"
 import { CurrentLocationRenderer } from "./CurrentLocationRenderer"
 import * as React from "preact"
-import {
-  initPlaceholderStart,
-  updatePlaceholderStart,
-} from "./startplaceholder"
+import { fetchPath } from "./api"
 
 import { fetchAndDrawEntireMap } from "./loadEntireMap"
+import { StartEndMarker } from "./StartEndMarker"
 
 // eslint-disable-next-line
 const { h, render, Component } = React
@@ -27,81 +25,116 @@ const { h, render, Component } = React
 class Root extends Component {
   constructor(props) {
     super(props)
+    this.fetchIndex = 0
     this.state = {
       isNavigating: false,
-      setFrom: true,
-      currentDistance: null,
-      body: {
-        fromLocation: [-0.0805621104047134, 51.517472862493804],
-        toLocation: [-0.0716729944249721, 51.51922576352587],
+      isLoading: true,
+      draftStartCoordinate: null,
+      startEndCoordinates: {
+        start: { lng: -0.0805621104047134, lat: 51.517472862493804 },
+        end: { lng: -0.0716729944249721, lat: 51.51922576352587 },
       },
+      pathGeoJson: null,
+      distance: null,
+    }
+    this.fetchPath(this.state.startEndCoordinates)
+  }
+
+  onClickMap = async (e) => {
+    if (this.state.isNavigating) return
+    const coordinate = e.lngLat
+    if (this.state.draftStartCoordinate) {
+      const coordinates = {
+        start: this.state.draftStartCoordinate,
+        end: coordinate,
+      }
+      this.setState({
+        draftStartCoordinate: null,
+        startEndCoordinates: coordinates,
+        isLoading: true,
+        pathGeoJson: null,
+      })
+
+      await this.fetchPath(coordinates)
+    } else {
+      this.setState({ draftStartCoordinate: coordinate })
     }
   }
 
-  onClickMap = async e => {
-    const { setFrom } = this.state
-    if (this.state.isNavigating) return
-    const { lng, lat } = e.lngLat
-    const coords = [lng, lat]
-    if (setFrom) {
+  async fetchPath(coordinates) {
+    const fetchIndex = ++this.fetchIndex
+    try {
+      const body = {
+        fromLocation: [coordinates.start.lng, coordinates.start.lat],
+        toLocation: [coordinates.end.lng, coordinates.end.lat],
+      }
+      const json = await fetchPath(body)
+      const path = json.data.features[0].geometry.coordinates
+      if (path.length === 0) {
+        throw new Error("path_not_found")
+      }
+      console.log("Path length", path.length)
+      console.log("Path distance", json.distance)
+      if (fetchIndex !== this.fetchIndex) return
       this.setState({
-        body: {
-          fromLocation: coords,
-          toLocation: this.state.body.toLocation,
-        },
+        isLoading: false,
+        distance: json.distance,
+        pathGeoJson: json.data,
       })
-    } else {
-      this.setState({
-        body: {
-          fromLocation: this.state.body.fromLocation,
-          toLocation: coords,
-        },
-      })
+    } catch (error) {
+      if (fetchIndex !== this.fetchIndex) return
+      console.error(error)
+      alert(
+        error.message === "path_not_found"
+          ? "Path not found"
+          : "Oops, something went wrong",
+      )
+      this.setState({ isLoading: false, distance: null, path: [] })
     }
-    if (setFrom) {
-      updatePlaceholderStart({ coords, isFetching: false })
-    }
-    this.setState({ setFrom: !setFrom })
   }
 
   async componentDidMount() {
-    const map = await Map.withMap()
+    const map = await Mapbox.withMap()
     this.setState({ map })
-    initPlaceholderStart(map)
-    map.on("mousedown", this.onClickMap)
+
+    let lastMouseEvent = null
+    map.on("mousedown", (e) => (lastMouseEvent = e))
+    map.on("mouseup", (e) => {
+      const diffX = Math.abs(
+        e.originalEvent.pageX - lastMouseEvent.originalEvent.pageX,
+      )
+      const diffY = Math.abs(
+        e.originalEvent.pageY - lastMouseEvent.originalEvent.pageY,
+      )
+      if (diffX < 5 && diffY < 5) {
+        this.onClickMap(e)
+      }
+    })
+
     // const locationMarker = new CurrentLocationDrawer(map)
     // pollForCurrentLocation(locationMarker)
+    // Debug draw all the streets from the server
     document.querySelector("#draw-all").addEventListener("click", () => {
       fetchAndDrawEntireMap(map)
     })
-  }
-
-  onPathStart = () => {
-    this.setState({ isFetching: true, isDrawing: false })
-    updatePlaceholderStart({ isFetching: true })
-  }
-
-  onPathSuccess = json => {
-    const distance = json.distance
-    this.setState({ isFetching: false, isDrawing: true, distance })
-    updatePlaceholderStart({ isFetching: false })
-  }
-
-  onFinishDrawing = () => {
-    this.setState({ isFetching: false, isDrawing: false })
-    updatePlaceholderStart({ isFetching: false })
-  }
-
-  onPathError = () => {
-    this.setState({ isFetching: false, isDrawing: false })
-    updatePlaceholderStart({ isFetching: false })
   }
 
   toggleNavigatingMode = () => {
     this.setState({ isNavigating: !this.state.isNavigating })
   }
 
-  render(props, { isNavigating, distance, map, body }) {
+  render(
+    props,
+    {
+      isNavigating,
+      distance,
+      map,
+      draftStartCoordinate,
+      isLoading,
+      startEndCoordinates,
+      pathGeoJson,
+    },
+  ) {
     return (
       <div>
         <Footer
@@ -111,14 +144,30 @@ class Root extends Component {
         ></Footer>
         {map && (
           <div>
-            <PathRenderer
-              map={map}
-              body={body}
-              onStart={this.onPathStart}
-              onSuccess={this.onPathSuccess}
-              onFinishDrawing={this.onFinishDrawing}
-              onError={this.onPathError}
-            ></PathRenderer>
+            {draftStartCoordinate && (
+              <StartEndMarker
+                map={map}
+                type="start"
+                coordinates={draftStartCoordinate}
+              />
+            )}
+            {startEndCoordinates && (
+              <StartEndMarker
+                map={map}
+                type="start"
+                coordinates={startEndCoordinates.start}
+                loading={isLoading}
+              />
+            )}
+            {startEndCoordinates && (
+              <StartEndMarker
+                map={map}
+                type="end"
+                coordinates={startEndCoordinates.end}
+                loading={isLoading}
+              />
+            )}
+            <PathRenderer map={map} geojson={pathGeoJson} />
             <CurrentLocationRenderer
               map={map}
               isNavigating={isNavigating}
@@ -135,11 +184,11 @@ render(<Root></Root>, document.querySelector("#react-root"))
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker
     .register("./sw-test/sw.js", { scope: "./sw-test/" })
-    .then(reg => {
+    .then((reg) => {
       // registration worked
       console.log("Registration succeeded. Scope is " + reg.scope)
     })
-    .catch(error => {
+    .catch((error) => {
       // registration failed
       console.log("Registration failed with " + error)
     })
