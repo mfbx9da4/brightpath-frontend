@@ -1,5 +1,5 @@
 // const BASE_URL = "http://localhost:8080";
-const BASE_URL = "https://brightpath.herokuapp.com"
+const BASE_URL = "https://brightpath-backend.onrender.com"
 
 export const fetchPath = async body => {
   try {
